@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MURPHY — AI Codebase Assistant · Project Checklist</title>
+  <meta name="description" content="Complete interactive project checklist for the MURPHY AI Codebase Assistant">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* ── Reset & Base ─────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary:   #0b0f19;
+      --bg-card:      #111827;
+      --bg-card-alt:  #1a2235;
+      --bg-hover:     #1e293b;
+      --border:       #1e293b;
+      --border-glow:  rgba(99,102,241,.25);
+      --text-primary: #e2e8f0;
+      --text-secondary:#94a3b8;
+      --text-muted:   #64748b;
+      --accent:       #818cf8;
+      --accent-vivid: #6366f1;
+      --accent-glow:  rgba(99,102,241,.35);
+      --green:        #34d399;
+      --green-glow:   rgba(52,211,153,.25);
+      --amber:        #fbbf24;
+      --rose:         #fb7185;
+      --radius:       12px;
+      --transition:   .25s cubic-bezier(.4,0,.2,1);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated Background ──────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(99,102,241,.08) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(52,211,153,.06) 0%, transparent 60%);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    /* ── Header ───────────────────────────────────────── */
+    header {
+      text-align: center;
+      padding: 3rem 1.5rem 1rem;
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -.02em;
+    }
+
+    header p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      margin-top: .5rem;
+      max-width: 600px;
+      margin-inline: auto;
+    }
+
+    /* ── Progress Bar ─────────────────────────────────── */
+    .progress-wrap {
+      max-width: 820px;
+      margin: 1.5rem auto 2rem;
+      padding: 0 1.5rem;
+    }
+
+    .progress-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: .85rem;
+      color: var(--text-muted);
+      margin-bottom: .5rem;
+    }
+
+    .progress-stats span strong {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .progress-bar-bg {
+      height: 10px;
+      border-radius: 99px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent-vivid), var(--green));
+      width: 0%;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* ── Controls ─────────────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: .75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      padding: 0 1.5rem;
+    }
+
+    .controls button {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 500;
+      padding: .5rem 1.1rem;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .controls button:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--border-glow);
+    }
+
+    .controls button.active {
+      background: var(--accent-vivid);
+      border-color: var(--accent-vivid);
+      color: #fff;
+    }
+
+    .btn-danger {
+      color: var(--rose) !important;
+      border-color: rgba(251,113,133,.3) !important;
+    }
+
+    .btn-danger:hover {
+      background: rgba(251,113,133,.12) !important;
+      border-color: var(--rose) !important;
+    }
+
+    /* ── Main Container ───────────────────────────────── */
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 1.5rem 4rem;
+    }
+
+    /* ── Phase Section ────────────────────────────────── */
+    .phase {
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      overflow: hidden;
+      transition: var(--transition);
+    }
+
+    .phase:hover {
+      border-color: var(--border-glow);
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+    }
+
+    .phase-header:hover {
+      background: var(--bg-hover);
+    }
+
+    .phase-chevron {
+      width: 20px;
+      height: 20px;
+      transition: transform .3s ease;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .phase.collapsed .phase-chevron {
+      transform: rotate(-90deg);
+    }
+
+    .phase-title {
+      flex: 1;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -.01em;
+    }
+
+    .phase-badge {
+      font-size: .72rem;
+      font-weight: 600;
+      padding: .2rem .65rem;
+      border-radius: 99px;
+      background: rgba(99,102,241,.12);
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .phase-badge.done {
+      background: rgba(52,211,153,.12);
+      color: var(--green);
+    }
+
+    .phase-body {
+      max-height: 2000px;
+      overflow: hidden;
+      transition: max-height .4s ease;
+    }
+
+    .phase.collapsed .phase-body {
+      max-height: 0;
+    }
+
+    /* ── Task Item ────────────────────────────────────── */
+    .task {
+      display: flex;
+      align-items: flex-start;
+      gap: .75rem;
+      padding: .65rem 1.25rem .65rem 2.5rem;
+      border-top: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .task:hover {
+      background: var(--bg-hover);
+    }
+
+    .task input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      border: 2px solid var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+      margin-top: 2px;
+      transition: var(--transition);
+      background: transparent;
+    }
+
+    .task input[type="checkbox"]:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+
+    .task input[type="checkbox"]:checked {
+      background: var(--accent-vivid);
+      border-color: var(--accent-vivid);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .task input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 1px;
+      width: 6px;
+      height: 11px;
+      border: solid #fff;
+      border-width: 0 2.5px 2.5px 0;
+      transform: rotate(45deg);
+    }
+
+    .task label {
+      cursor: pointer;
+      font-size: .92rem;
+      color: var(--text-primary);
+      line-height: 1.55;
+      transition: var(--transition);
+    }
+
+    .task.checked label {
+      color: var(--text-muted);
+      text-decoration: line-through;
+      text-decoration-color: var(--text-muted);
+    }
+
+    .task .tag {
+      font-size: .68rem;
+      font-weight: 600;
+      padding: .15rem .5rem;
+      border-radius: 99px;
+      white-space: nowrap;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .tag-core      { background: rgba(99,102,241,.12); color: var(--accent); }
+    .tag-ai        { background: rgba(251,191,36,.12); color: var(--amber); }
+    .tag-frontend  { background: rgba(52,211,153,.12); color: var(--green); }
+    .tag-deploy    { background: rgba(251,113,133,.12); color: var(--rose); }
+    .tag-future    { background: rgba(148,163,184,.12); color: var(--text-secondary); }
+    .tag-test      { background: rgba(56,189,248,.12); color: #38bdf8; }
+    .tag-docs      { background: rgba(192,132,252,.12); color: #c084fc; }
+
+    /* ── Footer ───────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: .8rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Animations ───────────────────────────────────── */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .phase {
+      animation: fadeIn .45s ease both;
+    }
+
+    .phase:nth-child(2)  { animation-delay: .05s; }
+    .phase:nth-child(3)  { animation-delay: .10s; }
+    .phase:nth-child(4)  { animation-delay: .15s; }
+    .phase:nth-child(5)  { animation-delay: .20s; }
+    .phase:nth-child(6)  { animation-delay: .25s; }
+    .phase:nth-child(7)  { animation-delay: .30s; }
+    .phase:nth-child(8)  { animation-delay: .35s; }
+    .phase:nth-child(9)  { animation-delay: .40s; }
+    .phase:nth-child(10) { animation-delay: .45s; }
+    .phase:nth-child(11) { animation-delay: .50s; }
+    .phase:nth-child(12) { animation-delay: .55s; }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 600px) {
+      .task { padding-left: 1.25rem; }
+      .controls { gap: .4rem; }
+      .controls button { font-size: .75rem; padding: .4rem .75rem; }
+    }
+
+    /* ── Confetti Canvas ──────────────────────────────── */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<header>
+  <h1>🧠 MURPHY</h1>
+  <p>AI Codebase Assistant — Complete Project Checklist</p>
+</header>
+
+<!-- Progress -->
+<div class="progress-wrap">
+  <div class="progress-stats">
+    <span><strong id="done-count">0</strong> / <strong id="total-count">0</strong> tasks completed</span>
+    <span id="percent-label">0 %</span>
+  </div>
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progress-fill"></div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <button onclick="expandAll()">Expand All</button>
+  <button onclick="collapseAll()">Collapse All</button>
+  <button onclick="filterTasks('all')" class="active" data-filter="all">All</button>
+  <button onclick="filterTasks('pending')" data-filter="pending">Pending</button>
+  <button onclick="filterTasks('done')" data-filter="done">Done</button>
+  <button onclick="resetAll()" class="btn-danger">Reset All</button>
+</div>
+
+<main id="checklist"></main>
+
+<footer>
+  MURPHY · AI Codebase Assistant · Checklist auto-saves to your browser
+</footer>
+
+<script>
+// ── DATA ───────────────────────────────────────────────
+const phases = [
+  {
+    title: "Phase 1 — Project Setup & Environment",
+    tasks: [
+      { id: "p1-01", text: "Create project root directory structure", tag: "core" },
+      { id: "p1-02", text: "Initialize Git repository & create .gitignore", tag: "core" },
+      { id: "p1-03", text: "Create & activate Python virtual environment", tag: "core" },
+      { id: "p1-04", text: "Create requirements.txt with all dependencies (fastapi, uvicorn, langchain, langchain-community, langchain-google-genai, google-generativeai, faiss-cpu, sentence-transformers, python-dotenv, pydantic, numpy, pandas, streamlit, GitPython)", tag: "core" },
+      { id: "p1-05", text: "Install all dependencies via pip", tag: "core" },
+      { id: "p1-06", text: "Create .env file with GOOGLE_API_KEY placeholder", tag: "core" },
+      { id: "p1-07", text: "Set up python-dotenv to load environment variables", tag: "core" },
+      { id: "p1-08", text: "Set up VS Code workspace with recommended extensions", tag: "core" },
+      { id: "p1-09", text: "Create initial README.md with project description", tag: "docs" },
+      { id: "p1-10", text: "Establish folder structure: /app, /app/api, /app/core, /app/services, /app/models, /app/utils, /frontend, /tests", tag: "core" },
+    ]
+  },
+  {
+    title: "Phase 2 — Repository Input & File Discovery",
+    tasks: [
+      { id: "p2-01", text: "Build repository upload endpoint (accept folder path or ZIP)", tag: "core" },
+      { id: "p2-02", text: "Implement ZIP archive extraction using zipfile module", tag: "core" },
+      { id: "p2-03", text: "Build recursive directory traversal using os/pathlib", tag: "core" },
+      { id: "p2-04", text: "Define supported file extension whitelist (.py, .java, .cpp, .js, .ts, .html, .css, .md, .json, .yaml, .v, .sv)", tag: "core" },
+      { id: "p2-05", text: "Implement file filtering — skip unsupported files, binaries, node_modules, __pycache__, .git", tag: "core" },
+      { id: "p2-06", text: "Collect file metadata (path, size, extension, last modified)", tag: "core" },
+      { id: "p2-07", text: "Build file reading utility with encoding handling (UTF-8 fallback)", tag: "core" },
+      { id: "p2-08", text: "Add temporary upload directory management (create/cleanup with shutil)", tag: "core" },
+      { id: "p2-09", text: "Write unit tests for file discovery and filtering", tag: "test" },
+    ]
+  },
+  {
+    title: "Phase 3 — Source Code Parsing & Processing",
+    tasks: [
+      { id: "p3-01", text: "Build Python AST parser to extract functions, classes, imports, and docstrings", tag: "core" },
+      { id: "p3-02", text: "Build generic text parser for non-Python files (read raw content with metadata)", tag: "core" },
+      { id: "p3-03", text: "Implement code cleaning — remove excessive whitespace, normalize formatting", tag: "core" },
+      { id: "p3-04", text: "Extract and preserve code comments and documentation strings", tag: "core" },
+      { id: "p3-05", text: "Generate per-file metadata (file name, language, functions list, classes list, imports)", tag: "core" },
+      { id: "p3-06", text: "Design parser interface so Tree-sitter can be swapped in later", tag: "core" },
+      { id: "p3-07", text: "Write unit tests for parsing logic", tag: "test" },
+    ]
+  },
+  {
+    title: "Phase 4 — Intelligent Chunking",
+    tasks: [
+      { id: "p4-01", text: "Configure LangChain RecursiveCharacterTextSplitter for code", tag: "ai" },
+      { id: "p4-02", text: "Implement language-aware chunking (split on function/class boundaries)", tag: "ai" },
+      { id: "p4-03", text: "Set appropriate chunk_size and chunk_overlap parameters", tag: "ai" },
+      { id: "p4-04", text: "Attach metadata to each chunk (source file, language, function name, class name)", tag: "ai" },
+      { id: "p4-05", text: "Handle edge cases: very small files (keep whole), very large files (multiple chunks)", tag: "ai" },
+      { id: "p4-06", text: "Write unit tests for chunking output quality", tag: "test" },
+    ]
+  },
+  {
+    title: "Phase 5 — Embedding Generation & Vector Store",
+    tasks: [
+      { id: "p5-01", text: "Set up Google Gemini Embedding model (or HuggingFace Sentence Transformers as fallback)", tag: "ai" },
+      { id: "p5-02", text: "Build embedding generation pipeline — convert chunks → vectors", tag: "ai" },
+      { id: "p5-03", text: "Initialize FAISS vector index (faiss-cpu)", tag: "ai" },
+      { id: "p5-04", text: "Store all chunk embeddings + metadata in FAISS index", tag: "ai" },
+      { id: "p5-05", text: "Implement FAISS index save/load to disk for persistence", tag: "ai" },
+      { id: "p5-06", text: "Build vector store wrapper using LangChain FAISS integration", tag: "ai" },
+      { id: "p5-07", text: "Verify similarity search returns relevant results for sample queries", tag: "test" },
+    ]
+  },
+  {
+    title: "Phase 6 — RAG Pipeline (Retrieval-Augmented Generation)",
+    tasks: [
+      { id: "p6-01", text: "Configure LangChain retriever from FAISS vector store (set top_k, search_type)", tag: "ai" },
+      { id: "p6-02", text: "Set up Google Gemini LLM via langchain-google-genai", tag: "ai" },
+      { id: "p6-03", text: "Design custom prompt templates — instruct LLM to answer ONLY from retrieved code", tag: "ai" },
+      { id: "p6-04", text: "Include instructions for: citing file names, explaining clearly, admitting uncertainty", tag: "ai" },
+      { id: "p6-05", text: "Build LangChain RetrievalQA chain (or ConversationalRetrievalChain for chat)", tag: "ai" },
+      { id: "p6-06", text: "Implement context construction — combine retrieved chunks with metadata", tag: "ai" },
+      { id: "p6-07", text: "Add conversation memory (LangChain ConversationBufferMemory or similar)", tag: "ai" },
+      { id: "p6-08", text: "Test RAG pipeline end-to-end with sample repository and questions", tag: "test" },
+      { id: "p6-09", text: "Tune retrieval parameters (top_k, chunk_size) for answer quality", tag: "ai" },
+    ]
+  },
+  {
+    title: "Phase 7 — FastAPI Backend",
+    tasks: [
+      { id: "p7-01", text: "Create FastAPI application entry point (main.py with uvicorn)", tag: "core" },
+      { id: "p7-02", text: "Define Pydantic request/response models for all endpoints", tag: "core" },
+      { id: "p7-03", text: "POST /upload — repository upload endpoint (accept ZIP or folder path)", tag: "core" },
+      { id: "p7-04", text: "POST /query — accept user question, return AI response with source references", tag: "core" },
+      { id: "p7-05", text: "GET /status — return indexing status (processing, ready, error)", tag: "core" },
+      { id: "p7-06", text: "GET /files — return list of indexed files for current repository", tag: "core" },
+      { id: "p7-07", text: "GET /history — return conversation history for the session", tag: "core" },
+      { id: "p7-08", text: "Implement session management (track per-user repositories and conversations)", tag: "core" },
+      { id: "p7-09", text: "Add CORS middleware for frontend communication", tag: "core" },
+      { id: "p7-10", text: "Add error handling and proper HTTP status codes", tag: "core" },
+      { id: "p7-11", text: "Test all endpoints with Postman", tag: "test" },
+    ]
+  },
+  {
+    title: "Phase 8 — Streamlit Frontend",
+    tasks: [
+      { id: "p8-01", text: "Create Streamlit app entry point (streamlit_app.py)", tag: "frontend" },
+      { id: "p8-02", text: "Build sidebar — repository upload widget (file uploader for ZIP)", tag: "frontend" },
+      { id: "p8-03", text: "Display indexing progress / status indicator", tag: "frontend" },
+      { id: "p8-04", text: "Build chat interface — text input + message display area", tag: "frontend" },
+      { id: "p8-05", text: "Display AI responses with syntax-highlighted code blocks", tag: "frontend" },
+      { id: "p8-06", text: "Show source file references with each answer", tag: "frontend" },
+      { id: "p8-07", text: "Implement conversation history panel (scrollable chat log)", tag: "frontend" },
+      { id: "p8-08", text: "Build search panel — quick semantic search without full chat", tag: "frontend" },
+      { id: "p8-09", text: "Show list of indexed files in sidebar", tag: "frontend" },
+      { id: "p8-10", text: "Add loading spinners and user feedback during processing", tag: "frontend" },
+      { id: "p8-11", text: "Style the UI for a clean, professional developer experience", tag: "frontend" },
+    ]
+  },
+  {
+    title: "Phase 9 — Core Features Implementation",
+    tasks: [
+      { id: "p9-01", text: "Repository Understanding — full project analysis with multi-file context", tag: "ai" },
+      { id: "p9-02", text: "AI Code Search — natural language queries returning relevant code snippets", tag: "ai" },
+      { id: "p9-03", text: "Code Explanation — explain functions, classes, APIs, algorithms, design patterns", tag: "ai" },
+      { id: "p9-04", text: "Architecture Exploration — module relationships, data flow, dependency structure", tag: "ai" },
+      { id: "p9-05", text: "Function Tracing — locate definitions, calls, API routes, class usage", tag: "ai" },
+      { id: "p9-06", text: "Intelligent Code Navigation — find similar implementations, related modules", tag: "ai" },
+      { id: "p9-07", text: "Bug Investigation Assistance — identify logic issues, missing validations, duplicates", tag: "ai" },
+      { id: "p9-08", text: "Documentation Generation — generate README sections, function docs, API summaries", tag: "ai" },
+      { id: "p9-09", text: "Multi-language Support — handle repos with multiple programming languages", tag: "ai" },
+      { id: "p9-10", text: "Context-Aware Conversations — maintain context throughout dev session", tag: "ai" },
+      { id: "p9-11", text: "Source Attribution — include file names, function names in every response", tag: "ai" },
+    ]
+  },
+  {
+    title: "Phase 10 — Testing & Quality Assurance",
+    tasks: [
+      { id: "p10-01", text: "Unit tests for file discovery, parsing, chunking modules", tag: "test" },
+      { id: "p10-02", text: "Unit tests for embedding generation and vector store operations", tag: "test" },
+      { id: "p10-03", text: "Integration tests for the full RAG pipeline (upload → query → response)", tag: "test" },
+      { id: "p10-04", text: "API endpoint tests using pytest + httpx (FastAPI TestClient)", tag: "test" },
+      { id: "p10-05", text: "Test with real-world repositories of varying sizes and languages", tag: "test" },
+      { id: "p10-06", text: "Evaluate answer quality — are responses grounded in actual code?", tag: "test" },
+      { id: "p10-07", text: "Test edge cases: empty repos, single-file repos, extremely large files, binary-only repos", tag: "test" },
+      { id: "p10-08", text: "Performance testing — measure indexing time and query response time", tag: "test" },
+    ]
+  },
+  {
+    title: "Phase 11 — Documentation & Portfolio",
+    tasks: [
+      { id: "p11-01", text: "Write comprehensive README.md (overview, setup, usage, screenshots, architecture)", tag: "docs" },
+      { id: "p11-02", text: "Document API endpoints (request/response examples)", tag: "docs" },
+      { id: "p11-03", text: "Add architecture diagram to documentation", tag: "docs" },
+      { id: "p11-04", text: "Write setup and installation guide", tag: "docs" },
+      { id: "p11-05", text: "Create .env.example file with required variables", tag: "docs" },
+      { id: "p11-06", text: "Add example queries and sample outputs to README", tag: "docs" },
+      { id: "p11-07", text: "Record a short demo video / GIF", tag: "docs" },
+      { id: "p11-08", text: "Push final code to GitHub with proper repository description and tags", tag: "docs" },
+    ]
+  },
+  {
+    title: "Phase 12 — Deployment",
+    tasks: [
+      { id: "p12-01", text: "Deploy FastAPI backend to Render or Railway", tag: "deploy" },
+      { id: "p12-02", text: "Deploy Streamlit frontend to Streamlit Community Cloud", tag: "deploy" },
+      { id: "p12-03", text: "Configure environment variables on deployment platforms", tag: "deploy" },
+      { id: "p12-04", text: "Test deployed application end-to-end (upload → query → response)", tag: "deploy" },
+      { id: "p12-05", text: "Set up monitoring / logging for production errors", tag: "deploy" },
+    ]
+  },
+  {
+    title: "Phase 13 — Future Enhancements (Post-MVP)",
+    tasks: [
+      { id: "p13-01", text: "GitHub repository integration (clone directly via URL)", tag: "future" },
+      { id: "p13-02", text: "Incremental indexing (re-index only changed files)", tag: "future" },
+      { id: "p13-03", text: "Live repository synchronization", tag: "future" },
+      { id: "p13-04", text: "Pull request review assistant", tag: "future" },
+      { id: "p13-05", text: "Code quality analysis", tag: "future" },
+      { id: "p13-06", text: "Security vulnerability detection", tag: "future" },
+      { id: "p13-07", text: "Test case generation", tag: "future" },
+      { id: "p13-08", text: "UML diagram generation", tag: "future" },
+      { id: "p13-09", text: "Sequence diagram generation", tag: "future" },
+      { id: "p13-10", text: "Code dependency visualization", tag: "future" },
+      { id: "p13-11", text: "Team collaboration features", tag: "future" },
+      { id: "p13-12", text: "VS Code Extension", tag: "future" },
+      { id: "p13-13", text: "CLI interface", tag: "future" },
+      { id: "p13-14", text: "Docker containerization", tag: "future" },
+      { id: "p13-15", text: "Multi-user workspace with authentication & authorization", tag: "future" },
+      { id: "p13-16", text: "Line-range source attribution in responses", tag: "future" },
+      { id: "p13-17", text: "Tree-sitter integration for advanced multi-language parsing", tag: "future" },
+      { id: "p13-18", text: "Migrate frontend to React for richer UI", tag: "future" },
+    ]
+  },
+];
+
+const TAG_LABELS = {
+  core: "CORE", ai: "AI / RAG", frontend: "FRONTEND",
+  deploy: "DEPLOY", future: "FUTURE", test: "TESTING", docs: "DOCS"
+};
+
+// ── STATE ──────────────────────────────────────────────
+const STORAGE_KEY = "murphy-checklist-v1";
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+
+function saveState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+let currentFilter = "all";
+
+// ── RENDER ─────────────────────────────────────────────
+const main = document.getElementById("checklist");
+
+function render() {
+  main.innerHTML = "";
+  let totalTasks = 0, doneTasks = 0;
+
+  phases.forEach((phase, pi) => {
+    const phaseEl = document.createElement("div");
+    phaseEl.className = "phase";
+
+    const phaseDone = phase.tasks.filter(t => state[t.id]).length;
+    const phaseTotal = phase.tasks.length;
+    totalTasks += phaseTotal;
+    doneTasks += phaseDone;
+
+    const allDone = phaseDone === phaseTotal;
+
+    // Header
+    phaseEl.innerHTML = `
+      <div class="phase-header" onclick="togglePhase(${pi})">
+        <svg class="phase-chevron" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+        </svg>
+        <span class="phase-title">${phase.title}</span>
+        <span class="phase-badge ${allDone ? 'done' : ''}">${phaseDone} / ${phaseTotal}</span>
+      </div>
+      <div class="phase-body" id="phase-body-${pi}"></div>
+    `;
+
+    const body = phaseEl.querySelector(".phase-body");
+
+    phase.tasks.forEach(task => {
+      const checked = !!state[task.id];
+      if (currentFilter === "done" && !checked) return;
+      if (currentFilter === "pending" && checked) return;
+
+      const taskEl = document.createElement("div");
+      taskEl.className = "task" + (checked ? " checked" : "");
+      taskEl.innerHTML = `
+        <input type="checkbox" id="${task.id}" ${checked ? "checked" : ""}>
+        <label for="${task.id}">${task.text}</label>
+        <span class="tag tag-${task.tag}">${TAG_LABELS[task.tag]}</span>
+      `;
+      taskEl.querySelector("input").addEventListener("change", e => {
+        state[task.id] = e.target.checked;
+        saveState(state);
+        render();
+        if (e.target.checked) checkConfetti();
+      });
+      body.appendChild(taskEl);
+    });
+
+    main.appendChild(phaseEl);
+  });
+
+  // Progress
+  document.getElementById("done-count").textContent = doneTasks;
+  document.getElementById("total-count").textContent = totalTasks;
+  const pct = totalTasks ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  document.getElementById("percent-label").textContent = pct + " %";
+  document.getElementById("progress-fill").style.width = pct + "%";
+}
+
+// ── INTERACTIONS ───────────────────────────────────────
+function togglePhase(i) {
+  const phases = document.querySelectorAll(".phase");
+  phases[i].classList.toggle("collapsed");
+}
+
+function expandAll() {
+  document.querySelectorAll(".phase").forEach(p => p.classList.remove("collapsed"));
+}
+
+function collapseAll() {
+  document.querySelectorAll(".phase").forEach(p => p.classList.add("collapsed"));
+}
+
+function filterTasks(filter) {
+  currentFilter = filter;
+  document.querySelectorAll("[data-filter]").forEach(b => b.classList.remove("active"));
+  document.querySelector(`[data-filter="${filter}"]`).classList.add("active");
+  render();
+}
+
+function resetAll() {
+  if (!confirm("Reset ALL checkboxes? This cannot be undone.")) return;
+  state = {};
+  saveState(state);
+  render();
+}
+
+// ── CONFETTI (lightweight celebration) ─────────────────
+function checkConfetti() {
+  const total = phases.reduce((s, p) => s + p.tasks.length, 0);
+  const done  = phases.reduce((s, p) => s + p.tasks.filter(t => state[t.id]).length, 0);
+  if (done === total) launchConfetti();
+  // Also celebrate phase completion
+  phases.forEach(phase => {
+    if (phase.tasks.every(t => state[t.id])) {
+      miniConfetti();
+    }
+  });
+}
+
+function miniConfetti() {
+  const canvas = document.getElementById("confetti-canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const particles = [];
+  const colors = ["#818cf8","#34d399","#fbbf24","#fb7185","#38bdf8","#c084fc"];
+  for (let i = 0; i < 40; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: -10,
+      vx: (Math.random() - .5) * 4,
+      vy: Math.random() * 3 + 2,
+      size: Math.random() * 6 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      spin: (Math.random() - .5) * 10,
+      life: 1,
+    });
+  }
+  let frame = 0;
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += .08;
+      p.rotation += p.spin;
+      p.life -= .012;
+      if (p.life <= 0) return;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI / 180);
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .6);
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 120 && particles.some(p => p.life > 0)) requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  animate();
+}
+
+function launchConfetti() {
+  const canvas = document.getElementById("confetti-canvas");
+  const ctx = canvas.getContext("2d");
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const particles = [];
+  const colors = ["#818cf8","#34d399","#fbbf24","#fb7185","#38bdf8","#c084fc","#fff"];
+  for (let i = 0; i < 200; i++) {
+    particles.push({
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      vx: (Math.random() - .5) * 16,
+      vy: (Math.random() - .5) * 16 - 4,
+      size: Math.random() * 8 + 3,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rotation: Math.random() * 360,
+      spin: (Math.random() - .5) * 15,
+      life: 1,
+    });
+  }
+  let frame = 0;
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += .12;
+      p.vx *= .99;
+      p.rotation += p.spin;
+      p.life -= .006;
+      if (p.life <= 0) return;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI / 180);
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * .5);
+      ctx.restore();
+    });
+    frame++;
+    if (frame < 250 && particles.some(p => p.life > 0)) requestAnimationFrame(animate);
+    else ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  animate();
+}
+
+// ── INIT ───────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
