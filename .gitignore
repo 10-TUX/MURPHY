@@ -39,6 +39,7 @@ Desktop.ini
 
 # ── FAISS Vector Store ───────────────────────────────
 vectorstore/
+faiss_index/
 *.faiss
 *.pkl
 

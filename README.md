@@ -6,7 +6,7 @@
 
 ## 🚀 What is MURPHY?
 
-MURPHY lets you **upload an entire software project** and interact with it using **natural language**.  
+MURPHY is being built as an AI-powered codebase assistant that will allow developer to **upload an entire software project** and interact with it using **natural language**.  
 Instead of manually searching through hundreds of files, ask questions about the codebase and receive accurate, context-aware answers backed by the actual source code.
 
 **Key capabilities:**
@@ -20,7 +20,7 @@ Instead of manually searching through hundreds of files, ask questions about the
 
 ---
 
-## 🏛️ Architecture
+## 🏛️ PLANNED/TARGET Architecture
 
 ```
 Repository Upload
@@ -50,7 +50,7 @@ Repository Scanner → File Filtering → Code Parsing
 | **LLM**        | Google Gemini API                              |
 | **AI Framework** | LangChain                                    |
 | **Embeddings** | Google Gemini Embeddings / Sentence Transformers |
-| **Vector DB**  | FAISS (Facebook AI Similarity Search)          |
+| **Vector DB**  | FAISS - vector similarity  search              |
 | **Parsing**    | Python AST (Tree-sitter planned)               |
 
 ---
