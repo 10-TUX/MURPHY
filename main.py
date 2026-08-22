@@ -8,6 +8,8 @@ Run with:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.repository import router as repository_router
+
 from app import __version__, __app_name__
 from app.core.config import get_settings
 
@@ -26,12 +28,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+app.include_router(repository_router)
 
 # ── CORS Middleware ─────────────────────────────────────
 # Allow Streamlit frontend (and dev tools) to communicate with the API.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],           # Tighten in production
+    allow_origins=["*"],  # Tighten in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
