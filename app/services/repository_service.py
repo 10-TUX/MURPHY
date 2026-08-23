@@ -119,3 +119,18 @@ def collect_file_metadata(
         )
 
     return metadata
+
+
+def read_file_content(file_path: str | Path) -> str:
+    """
+    Read the content of a file.
+    UTF-8 is attempted first. If decoding fails, fall back to UTF-8 with replacement characters
+    """
+    file_path = Path(file_path).resolve()
+
+    if not file_path.is_file():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    try:
+        return file_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return file_path.read_text(encoding="utf-8", errors="replace")
