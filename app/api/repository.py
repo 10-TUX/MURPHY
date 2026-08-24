@@ -1,8 +1,12 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile, mkdtemp
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
-from app.services.repository_service import extract_repository
+from app.utils.temporary_workspace import TemporaryWorkspace
+from app.services.repository_service import (
+    extract_repository,
+    discover_files,
+    collect_file_metadata,
+)
 
 
 router = APIRouter(
@@ -55,26 +59,40 @@ async def upload_repo(
         if not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="File must be a zip file.")
 
-        with NamedTemporaryFile(suffix=".zip", delete=False) as temp_file:
-            while chunk := await file.read(1024 * 1024):
-                temp_file.write(chunk)
-            temp_path = Path(temp_file.name)
-        extraction_path = Path(mkdtemp(prefix="murphy-repo_"))
-
         try:
-            repository_path = extract_repository(
-                zip_path=temp_path, destination=extraction_path
-            )
+            with TemporaryWorkspace() as workspace:
+                # save the uploaded ZIP inside the temporary workspace.
+                temp_path = workspace / file.filename
+
+                with temp_path.open("wb") as temp_file:
+                    while chunk := await file.read(1024 * 1024):
+                        temp_file.write(chunk)
+
+                # Extract repository into the same workspace.
+                extraction_path = workspace / "repository"
+                repository_path = extract_repository(
+                    zip_path=temp_path,
+                    destination=extraction_path,
+                )
+
+                # discover supported files
+                discovered_files = discover_files(repository_path)
+
+                # collect file metadata
+                file_metadata = collect_file_metadata(repository_path)
+
+                return {
+                    "status": "success",
+                    "source": "zip_file",
+                    "filename": file.filename,
+                    "repository_path": str(repository_path),
+                    "file_count": len(discovered_files),
+                    "files": [item.model_dump(mode="json") for item in file_metadata],
+                    "message": "Repository loaded successfully.",
+                }
+
         except (FileNotFoundError, ValueError) as exc:
             raise HTTPException(
                 status_code=400,
                 detail=f"Failed to extract zip file: {str(exc)}",
             ) from exc
-
-        return {
-            "status": "success",
-            "source": "zip_file",
-            "filename": file.filename,
-            "repository_path": str(repository_path),
-            "message": "Repository loaded successfully.",
-        }
