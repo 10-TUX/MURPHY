@@ -1,3 +1,4 @@
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 from app.models.parsed_file import ParsedFile
 
@@ -56,10 +57,24 @@ class ChunkingService:
         splitter = self._create_splitter("generic")
         return splitter.split_text(content)
 
-    def chunk(self, parsed_file: ParsedFile) -> list[str]:
+    def chunk(self, parsed_file: ParsedFile) -> list[Document]:
         """Split a parsed file into smaller chunks using language aware separators."""
-        if not parsed_file.content:
+        if not parsed_file:
             return []
 
         splitter = self._create_splitter(parsed_file.language)
-        return splitter.split_text(parsed_file.content)
+        chunks = splitter.split_text(parsed_file.content)
+
+        documents = []
+
+        for chunk in chunks:
+            documents.append(
+                Document(
+                    page_content=chunk,
+                    metadata={
+                        "source": parsed_file.file_path,
+                        "language": parsed_file.language,
+                    },
+                )
+            )
+        return documents
