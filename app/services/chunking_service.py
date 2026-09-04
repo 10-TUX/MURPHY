@@ -57,6 +57,10 @@ class ChunkingService:
         splitter = self._create_splitter("generic")
         return splitter.split_text(content)
 
+    def _get_line_number(self, content: str, position: int) -> int:
+        """Convert a character position into a 1-based line number"""
+        return content.count("\n", 0, position) + 1
+
     def chunk(self, parsed_file: ParsedFile) -> list[Document]:
         """Split a parsed file into smaller chunks using language aware separators."""
         if not parsed_file:
@@ -66,15 +70,35 @@ class ChunkingService:
         chunks = splitter.split_text(parsed_file.content)
 
         documents = []
+        search_start = 0
 
         for chunk in chunks:
+            # Finf the chunks position in the original file.
+
+            start_position = parsed_file.content.find(chunk, search_start)
+            if start_position == -1:
+                start_position = search_start
+            end_position = start_position + len(chunk)
+
+            start_line = self._get_line_number(
+                parsed_file.content,
+                start_position,
+            )
+            end_line = self._get_line_number(
+                parsed_file.content,
+                max(start_position, end_position - 1),
+            )
+
             documents.append(
                 Document(
                     page_content=chunk,
                     metadata={
                         "source": parsed_file.file_path,
                         "language": parsed_file.language,
+                        "start_line": start_line,
+                        "end_line": end_line,
                     },
                 )
             )
+            search_start = end_position
         return documents
