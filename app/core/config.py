@@ -5,7 +5,6 @@ Loads environment variables using python-dotenv and exposes them
 as a validated Pydantic Settings object used throughout the app.
 """
 
-import os
 from pathlib import Path
 from functools import lru_cache
 
@@ -40,6 +39,21 @@ class Settings(BaseSettings):
     embedding_provider: str = Field(
         default="gemini",
         description="'gemini' or 'huggingface'",
+    )
+
+    embedding_model: str = Field(
+        default="gemini-embedding-001",
+        description="Embedding model name",
+    )
+
+    embedding_dimension: int = Field(
+        default=1536,
+        description="Embedding Vector's Dimensions",
+    )
+
+    huggingface_embedding_model: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="Fallback Huggingface embedding model name",
     )
 
     # ── FAISS / Vector Store ────────────────────────────
