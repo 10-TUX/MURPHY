@@ -30,6 +30,14 @@ class Settings(BaseSettings):
         description="Google Gemini API key",
     )
 
+    gemini_model: str = Field(
+        default="gemini-2.5-flash", description="Gemini model used for RAG generation"
+    )
+
+    gemini_temperature: float = Field(
+        default=0.2, description="Temperature used for Gemini generation"
+    )
+
     # ── Application ─────────────────────────────────────
     app_name: str = Field(default="MURPHY")
     app_env: str = Field(default="development")

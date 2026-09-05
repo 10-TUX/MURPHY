@@ -5,6 +5,7 @@ from pathlib import Path
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import FAISS
+from langchain_core.retrievers import BaseRetriever
 
 from app.core.config import get_settings
 from app.services.embedding_service import EmbeddingService
@@ -33,7 +34,6 @@ class VectorStoreService:
             documents,
             self.embeddings,
         )
-
         return self.vectorstore
 
     def similarity_search(
@@ -52,6 +52,30 @@ class VectorStoreService:
             return []
 
         return self.vectorstore.similarity_search(query, k=k)
+
+    def get_retriever(
+        self,
+        k: int = 4,
+        search_type: str = "similarity",
+    ) -> BaseRetriever:
+        """Return a LangChain retriever from backed by the FAISS vector store."""
+        if self.vectorstore is None:
+            raise ValueError("Vector store has not been created.")
+        if k <= 0:
+            raise ValueError("k must be greater than 0.")
+        supported_search_types = {
+            "similarity",
+            "mmr",
+            "similarity_score_threshold",
+        }
+        if search_type not in supported_search_types:
+            raise ValueError(
+                f"Unsupported search type: {search_type}."
+                f"Must be one of {sorted(supported_search_types)}"
+            )
+        return self.vectorstore.as_retriever(
+            search_type=search_type, search_kwargs={"k": k}
+        )
 
     def save(
         self,
@@ -76,6 +100,7 @@ class VectorStoreService:
 
         if not load_path.exists():
             raise FileNotFoundError(f"Vector store path does not exist: {load_path}")
+
         self.vectorstore = FAISS.load_local(
             str(load_path),
             self.embeddings,

@@ -33,7 +33,6 @@ def test_create_vector_store():
             metadata={"source": "cart.py"},
         ),
     ]
-
     service = VectorStoreService(
         embeddings=FakeEmbeddings(),
     )
@@ -147,3 +146,123 @@ def test_save_and_load_vector_store(tmp_path):
     results = loaded_service.similarity_search("def login(): pass", k=1)
     assert len(results) == 1
     assert results[0].metadata["source"] == "auth.py"
+
+
+def test_get_retriever_returns_retreiver():
+    """A retriever should be returned from the vector store."""
+    documents = [
+        Document(
+            page_content="def login(): pass",
+            metadata={"source": "auth.py"},
+        ),
+        Document(
+            page_content="def calculate_total(): pass",
+            metadata={"source": "cart.py"},
+        ),
+    ]
+
+    service = VectorStoreService(
+        embeddings=FakeEmbeddings(),
+    )
+    service.create(documents)
+    retriever = service.get_retriever()
+    assert retriever is not None
+
+
+def test_get_retriever_with_custom_k():
+    """Retriever should respect the k parameter"""
+    documents = [
+        Document(
+            page_content="def login(): pass",
+            metadata={"source": "auth.py"},
+        ),
+        Document(
+            page_content="def calculate_total(): pass",
+            metadata={"source": "cart.py"},
+        ),
+    ]
+    service = VectorStoreService(
+        embeddings=FakeEmbeddings(),
+    )
+    service.create(documents)
+    retriever = service.get_retriever(k=1)
+    results = retriever.invoke("def login(): pass")
+    assert len(results) == 1
+    assert isinstance(results[0], Document)
+
+
+def test_get_retriever_with_mmr():
+    """Retriever should support maximum marginal relevance search"""
+    documents = [
+        Document(
+            page_content="def login()",
+            metadata={"source": "auth.py"},
+        ),
+        Document(
+            page_content="def calculate_total(): pass",
+            metadata={"source": "cart.py"},
+        ),
+    ]
+    service = VectorStoreService(
+        embeddings=FakeEmbeddings(),
+    )
+    service.create(documents)
+    retriever = service.get_retriever(
+        k=1,
+        search_type="mmr",
+    )
+    results = retriever.invoke("def login(): pass")
+
+    assert len(results) == 1
+    assert isinstance(results[0], Document)
+
+
+def test_get_retriever_before_creation_raise_error():
+    """Creating a retriever before creating the vector store should fail."""
+
+    service = VectorStoreService(
+        embeddings=FakeEmbeddings(),
+    )
+    try:
+        service.get_retriever()
+        assert False
+    except ValueError as exc:
+        assert "not been created" in str(exc)
+
+
+def test_get_retriever_rejects_invalid_k():
+    """Retriever should reject non-positive k values."""
+    documents = [
+        Document(
+            page_content="def login(): pass",
+            metadata={"source": "auth.py"},
+        )
+    ]
+    service = VectorStoreService(
+        embeddings=FakeEmbeddings(),
+    )
+    service.create(documents)
+    try:
+        service.get_retriever(k=0)
+        assert False
+    except ValueError as exc:
+        assert "k must be greater than 0" in str(exc)
+
+
+def test_get_retriever_rejects_invalid_search_type():
+    """Retriever should reject invalid search types"""
+    documents = [
+        Document(
+            page_content="def login(): pass",
+            metadata={"source": "auth.py"},
+        )
+    ]
+    service = VectorStoreService(
+        embeddings=FakeEmbeddings(),
+    )
+    service.create(documents)
+    try:
+        service.get_retriever(search_type="invalid")
+        assert False
+    except ValueError as exc:
+        assert "Unsupported search type" in str(exc)
