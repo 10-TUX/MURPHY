@@ -3,7 +3,7 @@
 Provides prompt templates used by the RAG pipeline.
 """
 
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 
 class PromptService:
@@ -25,18 +25,39 @@ Follow these rules:
    execution paths, or behavior that are not supported by the context.
 3. When explaining code, prefer concrete references to file paths,
    functions, classes, and line ranges when available.
-4. Explain relationships between relevant components when the context
+4. When citing repository code, use this format:
+   [source:start_line-end_line]
+5. Only cite information that is actually present in the retrieved context.
+6. Explain relationships between relevant components when the context
    provides enough information to establish them.
-5. Clearly distinguish directly observed facts from reasonable inferences.
-6. If the retrieved context is insufficient to answer the question,
-   explicitly say what information is missing.
-7. Do not pretend to have inspected files that are not present in the
-   retrieved context.
-8. When useful, structure explanations with headings, bullet points,
-   or step-by-step execution flows.
-9. Keep technical explanations accurate and understandable.
-10. If the user asks about code behavior, explain both what happens
+7. Clearly distinguish directly observed facts from reasonable inferences.
+8. When making an inference, explicitly label it as an inference.
+9. If the retrieved context is insufficient to answer the question,
+   explicitly say that the available context is insufficient.
+10. Do not pretend to have inspected files that are not present in the
+    retrieved context.
+11. If relevant information may exist elsewhere in the repository but
+    was not retrieved, say that additional repository context may be needed.
+12. When useful, structure explanations with headings, bullet points,
+    or step-by-step execution flows.
+13. Keep technical explanations accurate and understandable.
+14. If the user asks about code behavior, explain both what happens
     and why it happens when the retrieved context supports that explanation.
+
+Citation requirements:
+
+- Use citations when making claims about specific repository code.
+- Prefer the most specific available source and line range.
+- Do not create citations for information that is not supported by context.
+- Do not fabricate line numbers.
+- If no citation can be supported, do not invent one.
+
+Uncertainty requirements:
+
+- Never guess when the retrieved context does not provide enough evidence.
+- Clearly state when the answer is uncertain.
+- Distinguish repository facts from inference.
+- If additional files or broader retrieval would be useful, mention that.
 
 Retrieved repository context:
 
@@ -46,9 +67,7 @@ Retrieved repository context:
         return ChatPromptTemplate.from_messages(
             [
                 ("system", system_prompt),
-                (
-                    "human",
-                    "{question}",
-                ),
+                MessagesPlaceholder(variable_name="chat_history", optional=True),
+                ("human", "{question}"),
             ]
         )
