@@ -4,6 +4,7 @@ Combines retrieval, prompt construction, and LLM generation
 into a single Retrieval-Augmented Generation pipeline.
 """
 
+from dataclasses import dataclass
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.retrievers import BaseRetriever
@@ -13,6 +14,14 @@ from langchain_core.messages import AIMessage, HumanMessage
 from app.services.llm_service import LLMService
 from app.services.prompt_service import PromptService
 from app.services.vector_store_service import VectorStoreService
+
+
+@dataclass
+class RAGResult:
+    """Result returned by the RAG pipeline."""
+
+    answer: str
+    documents: list[Document]
 
 
 class RAGService:
@@ -42,9 +51,7 @@ class RAGService:
 
         self.chain = (
             {
-                "context": (lambda x: x["question"])
-                | self.retriever
-                | self._format_docs,
+                "context": lambda x: x["context"],
                 "question": lambda x: x["question"],
                 "chat_history": lambda x: self.chat_history,
             }
@@ -88,12 +95,15 @@ class RAGService:
         if not question.strip():
             raise ValueError("Question cannot be empty.")
 
+        documents = self.retrieve(question)
+        context = self._format_docs(documents)
         response = self.chain.invoke(
             {
                 "question": question,
+                "context": context,
             }
         )
         self.chat_history.append(HumanMessage(content=question))
         self.chat_history.append(AIMessage(content=response))
 
-        return response
+        return RAGResult(answer=response, documents=documents)

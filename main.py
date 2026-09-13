@@ -9,7 +9,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.repository import router as repository_router
-
+from app.api.query import router as query_router
+from app.api.status import router as status_router
 from app import __version__, __app_name__
 from app.core.config import get_settings
 
@@ -29,6 +30,8 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 app.include_router(repository_router)
+app.include_router(query_router)
+app.include_router(status_router)
 
 # ── CORS Middleware ─────────────────────────────────────
 # Allow Streamlit frontend (and dev tools) to communicate with the API.

@@ -82,7 +82,7 @@ def test_invoke_runs_complete_rag_pipeline():
 
     response = service.invoke("What does hello do?")
 
-    assert response == "The hello function returns a greeting."
+    assert response.answer == "The hello function returns a greeting."
 
 
 def test_invoke_rejects_empty_question():
@@ -214,42 +214,7 @@ def test_invoke_updates_chat_history():
     assert service.chat_history[0].content == "What does hello do?"
 
     assert isinstance(service.chat_history[1], AIMessage)
-    assert service.chat_history[1].content == response
-
-
-def test_chat_history_preserves_message_order():
-    """Conversation history should preserve human → AI ordering."""
-
-    service, _, _ = create_rag_service()
-
-    service.invoke("What does hello do?")
-
-    assert service.chat_history[0].type == "human"
-    assert service.chat_history[1].type == "ai"
-
-
-def test_chat_history_starts_empty():
-    """A new RAG service should have no conversation history."""
-
-    service, _, _ = create_rag_service()
-
-    assert service.chat_history == []
-
-
-def test_invoke_updates_chat_history():
-    """A successful invocation should store the user question and AI response."""
-
-    service, _, _ = create_rag_service()
-
-    response = service.invoke("What does hello do?")
-
-    assert len(service.chat_history) == 2
-
-    assert isinstance(service.chat_history[0], HumanMessage)
-    assert service.chat_history[0].content == "What does hello do?"
-
-    assert isinstance(service.chat_history[1], AIMessage)
-    assert service.chat_history[1].content == response
+    assert service.chat_history[1].content == response.answer
 
 
 def test_chat_history_preserves_message_order():
@@ -313,68 +278,13 @@ def test_end_to_end_rag_pipeline():
 
     response = service.invoke("How does UserService retrieve a user?")
 
-    assert response == ("UserService retrieves a user through " "UserRepository.")
+    assert response.answer == (
+        "UserService retrieves a user through " "UserRepository."
+    )
 
     assert len(service.chat_history) == 2
     assert service.chat_history[0].content == ("How does UserService retrieve a user?")
-    assert service.chat_history[1].content == response
-
-
-def test_end_to_end_rag_pipeline():
-    """The complete RAG pipeline should retrieve context and generate an answer."""
-
-    documents = [
-        Document(
-            page_content=(
-                "class UserService:\n"
-                "    def get_user(self, user_id):\n"
-                "        return self.repository.find(user_id)"
-            ),
-            metadata={
-                "source": "app/services/user_service.py",
-                "start_line": 10,
-                "end_line": 12,
-            },
-        ),
-        Document(
-            page_content=(
-                "class UserRepository:\n"
-                "    def find(self, user_id):\n"
-                "        return self.db.query(user_id)"
-            ),
-            metadata={
-                "source": "app/repositories/user_repository.py",
-                "start_line": 20,
-                "end_line": 22,
-            },
-        ),
-    ]
-
-    retriever = FakeRetriever(documents=documents)
-
-    llm = FakeMessagesListChatModel(
-        responses=[
-            AIMessage(
-                content=("UserService retrieves a user through " "UserRepository.")
-            )
-        ]
-    )
-
-    vector_store = MagicMock()
-
-    service = RAGService(
-        vector_store=vector_store,
-        llm=llm,
-        retriever=retriever,
-    )
-
-    response = service.invoke("How does UserService retrieve a user?")
-
-    assert response == ("UserService retrieves a user through " "UserRepository.")
-
-    assert len(service.chat_history) == 2
-    assert service.chat_history[0].content == ("How does UserService retrieve a user?")
-    assert service.chat_history[1].content == response
+    assert service.chat_history[1].content == response.answer
 
 
 def test_end_to_end_context_contains_retrieved_metadata():
@@ -396,7 +306,6 @@ def test_end_to_end_context_contains_retrieved_metadata():
     llm = FakeMessagesListChatModel(
         responses=[AIMessage(content="The function calculates the total of the items.")]
     )
-
     service = RAGService(
         vector_store=MagicMock(),
         llm=llm,
@@ -405,12 +314,11 @@ def test_end_to_end_context_contains_retrieved_metadata():
 
     response = service.invoke("What does calculate_total do?")
 
-    assert response == ("The function calculates the total of the items.")
+    assert response.answer == ("The function calculates the total of the items.")
 
     formatted_context = service._format_docs(
         service.retrieve("What does calculate_total do?")
     )
-
     assert "[app/utils/calculator.py:15-16]" in formatted_context
     assert "def calculate_total(items):" in formatted_context
 
@@ -444,3 +352,33 @@ def test_rag_service_rejects_invalid_top_k():
             llm=llm,
             top_k=0,
         )
+
+
+def test_invoke_returns_retrieved_documents():
+    documents = [
+        Document(
+            page_content="def hello(): pass",
+            metadata={
+                "source": "main.py",
+                "start_line": 1,
+                "end_line": 1,
+            },
+        )
+    ]
+
+    retriever = MagicMock()
+    retriever.invoke.return_value = documents
+
+    llm = FakeMessagesListChatModel(responses=[AIMessage(content="Hello explanation")])
+
+    rag_service = RAGService(
+        vector_store=MagicMock(),
+        llm=llm,
+        retriever=retriever,
+    )
+
+    result = rag_service.invoke("What does hello do?")
+
+    assert result.answer == "Hello explanation"
+    assert result.documents == documents
+    retriever.invoke.assert_called_once_with("What does hello do?")
