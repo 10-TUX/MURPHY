@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.models.api_models import QueryRequest, QueryResponse
 from app.services.rag_service import RAGService
+from app.services.session_service import session_service
 
 
 router = APIRouter(
@@ -12,29 +13,38 @@ router = APIRouter(
 )
 
 
-# Temporary application-level RAG service.
-# Session-specific RAG state will be introduced in Step 8.
-_rag_service: RAGService | None = None
-
-
-def set_rag_service(rag_service: RAGService) -> None:
-    """Set the RAG service used by the query endpoint."""
-    global _rag_service
-    _rag_service = rag_service
+def set_rag_service(
+    session_id: str,
+    rag_service: RAGService,
+) -> None:
+    """Attach a RAG service to a repository session."""
+    session_service.set_rag_service(
+        session_id,
+        rag_service,
+    )
 
 
 @router.post("/query", response_model=QueryResponse)
-async def query(request: QueryRequest) -> QueryResponse:
-    """Answer a question using the MURPHY RAG pipeline."""
+async def query(
+    request: QueryRequest,
+    session_id: str,
+) -> QueryResponse:
+    """Answer a question using the MURPHY RAG service for a session."""
 
-    if _rag_service is None:
+    session = session_service.get_session(session_id)
+
+    if session is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Session not found.",
+        )
+    if session.rag_service is None:
         raise HTTPException(
             status_code=503,
-            detail="RAG service is not initialized.",
+            detail="RAG service is not initialized for this session.",
         )
-
     try:
-        result = _rag_service.invoke(request.question)
+        result = session.rag_service.invoke(request.question)
 
         sources = []
 
