@@ -1,7 +1,12 @@
 from pathlib import Path
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from tempfile import TemporaryDirectory
+from uuid import uuid4
 
-from app.utils.temporary_workspace import TemporaryWorkspace
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from app.services.session_service import session_service
+from app.services.repository_indexing_service import RepositoryIndexingService
+
+from app.models.api_models import RepositoryUploadResponse
 from app.services.repository_service import (
     extract_repository,
     discover_files,
@@ -20,7 +25,7 @@ router = APIRouter(
 async def upload_repo(
     file: UploadFile | None = File(default=None),
     repository_path: str | None = Form(default=None),
-):
+) -> RepositoryUploadResponse:
     """
     Upload a zip file or provide a local path to a repository.
     """
@@ -31,6 +36,11 @@ async def upload_repo(
             detail="Either a file or a repository path must be provided.",
         )
 
+    # Generate session id
+    session_id = str(uuid4())
+    indexing_service = RepositoryIndexingService()
+
+    # Local path repository
     if repository_path is not None:
         path = Path(repository_path).resolve()
         if not path.exists():
@@ -44,12 +54,26 @@ async def upload_repo(
                 status_code=400,
                 detail=f"Repository path {repository_path} is not a directory.",
             )
-        return {
-            "status": "success",
-            "source": "local_path",
-            "repository_path": str(path),
-            "message": "Repository loaded successfully.",
-        }
+
+        session_service.create_session(
+            session_id=session_id,
+            repository_path=path,
+            source="local_path",
+        )
+
+        rag_service = indexing_service.build_rag_service(path)
+        session_service.set_rag_service(
+            session_id=session_id,
+            rag_service=rag_service,
+        )
+
+        return RepositoryUploadResponse(
+            status="success",
+            source="local_path",
+            repository_path=str(path),
+            session_id=session_id,
+            message="Repository loaded successfully.",
+        )
 
     # Zip upload
     if file is not None:
@@ -59,40 +83,59 @@ async def upload_repo(
         if not file.filename.lower().endswith(".zip"):
             raise HTTPException(status_code=400, detail="File must be a zip file.")
 
-        try:
-            with TemporaryWorkspace() as workspace:
-                # save the uploaded ZIP inside the temporary workspace.
-                temp_path = workspace / file.filename
+        workspace = TemporaryDirectory(prefix="murphy_repo_")
 
-                with temp_path.open("wb") as temp_file:
-                    while chunk := await file.read(1024 * 1024):
-                        temp_file.write(chunk)
+        try:
+            workspace_path = Path(workspace.name)
+            # save the uploaded ZIP inside the temporary workspace.
+            temp_path = workspace_path / file.filename
+
+            with temp_path.open("wb") as temp_file:
+                while chunk := await file.read(1024 * 1024):
+                    temp_file.write(chunk)
 
                 # Extract repository into the same workspace.
-                extraction_path = workspace / "repository"
-                repository_path = extract_repository(
-                    zip_path=temp_path,
-                    destination=extraction_path,
-                )
+            extraction_path = workspace_path / "repository"
+            repository_path = extract_repository(
+                zip_path=temp_path,
+                destination=extraction_path,
+            )
 
-                # discover supported files
-                discovered_files = discover_files(repository_path)
+            # discover supported files
+            discovered_files = discover_files(repository_path)
 
-                # collect file metadata
-                file_metadata = collect_file_metadata(repository_path)
+            # collect file metadata
+            file_metadata = collect_file_metadata(repository_path)
 
-                return {
-                    "status": "success",
-                    "source": "zip_file",
-                    "filename": file.filename,
-                    "repository_path": str(repository_path),
-                    "file_count": len(discovered_files),
-                    "files": [item.model_dump(mode="json") for item in file_metadata],
-                    "message": "Repository loaded successfully.",
-                }
+            session_service.create_session(
+                session_id=session_id,
+                repository_path=repository_path,
+                source="zip_file",
+                workspace=workspace,
+            )
+            rag_service = indexing_service.build_rag_service(repository_path)
+            session_service.set_rag_service(
+                session_id=session_id,
+                rag_service=rag_service,
+            )
+
+            return RepositoryUploadResponse(
+                status="success",
+                source="zip_file",
+                filename=file.filename,
+                repository_path=str(repository_path),
+                session_id=session_id,
+                file_count=len(discovered_files),
+                files=[item.model_dump(mode="json") for item in file_metadata],
+                message="Repository loaded successfully.",
+            )
 
         except (FileNotFoundError, ValueError) as exc:
+            workspace.cleanup()
             raise HTTPException(
                 status_code=400,
                 detail=f"Failed to extract zip file: {str(exc)}",
             ) from exc
+        except Exception:
+            workspace.cleanup()
+            raise
