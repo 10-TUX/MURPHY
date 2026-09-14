@@ -19,7 +19,7 @@ class RepositoryUploadResponse(BaseModel):
     source: str
     repository_path: str
     message: str
-
+    session_id: str
     filename: str | None = None
     file_count: int | None = None
     files: list[FileMetadata] = Field(default_factory=list)
