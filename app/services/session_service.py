@@ -3,6 +3,10 @@
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.services.rag_service import RAGService
 
 
 @dataclass
@@ -12,6 +16,7 @@ class RepositorySession:
     session_id: str
     repository_path: Path
     source: str
+    rag_service: RAGService | None = None
 
 
 class SessionService:
@@ -50,6 +55,27 @@ class SessionService:
 
         return self._sessions.get(session_id)
 
+    def has_session(self, session_id: str) -> bool:
+        """Return whether a session exists."""
+        return session_id in self._sessions
+
+    def list_sessions(self) -> list[RepositorySession]:
+        """Return all active sessions."""
+        return list(self._sessions.values())
+
+    def set_rag_service(
+        self,
+        session_id: str,
+        rag_service: RAGService,
+    ) -> None:
+        """
+        Attach a RAG service to an existing session.
+        """
+        session = self._sessions.get(session_id)
+        if session is None:
+            raise ValueError(f"Session not found: {session_id}")
+        session.rag_service = rag_service
+
     def remove_session(self, session_id: str) -> None:
         """Remove a session and clean up its workspace."""
 
@@ -60,11 +86,11 @@ class SessionService:
         if workspace is not None:
             workspace.cleanup()
 
-    def has_session(self, session_id: str) -> bool:
-        """Return whether a session exists."""
-        return session_id in self._sessions
-
     def clear(self) -> None:
         """Remove all sessions and clean up their workspaces."""
         for session_id in list(self._sessions):
             self.remove_session(session_id)
+
+
+# shared application-level session registry between API and worker
+session_service = SessionService()
